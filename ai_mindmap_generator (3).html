@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroMap - AI Mindmap Generator</title>
+    
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Mermaid.js for rendering the mindmaps -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    animation: {
+                        'gradient-x': 'gradient-x 15s ease infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        'gradient-x': {
+                            '0%, 100%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'left center'
+                            },
+                            '50%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'right center'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a polished look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.3);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.5);
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        #mermaid-container svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 animate-gradient-x text-slate-800 p-4 md:p-8 font-sans selection:bg-purple-200 selection:text-purple-900">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="text-center py-6 mb-4">
+            <div class="inline-flex items-center justify-center space-x-3 bg-white/50 px-6 py-2 rounded-full border border-white/60 shadow-sm mb-4">
+                <i class="fa-solid fa-brain text-purple-600 text-xl"></i>
+                <span class="font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">NeuroMap AI</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight mb-3">
+                Turn thoughts into <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">Visual Maps</span>
+            </h1>
+            <p class="text-slate-500 text-lg max-w-2xl mx-auto">
+                Paste your unstructured notes, meeting minutes, or study material below, and watch AI instantly structure it into a beautiful mind map.
+            </p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Column: Input -->
+            <div class="lg:col-span-4 flex flex-col space-y-4">
+                <div class="glass-panel rounded-3xl p-6 h-[600px] flex flex-col relative overflow-hidden transition-all hover:shadow-2xl hover:shadow-purple-500/10">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-xl flex items-center gap-2">
+                            <i class="fa-solid fa-align-left text-indigo-500"></i> Raw Text
+                        </h2>
+                        <button onclick="clearText()" class="text-xs text-slate-400 hover:text-red-500 transition-colors" title="Clear Text">
+                            <i class="fa-solid fa-trash-can"></i> Clear
+                        </button>
+                    </div>
+                    
+                    <textarea id="userInput" class="w-full flex-grow bg-white/50 border border-purple-100 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white resize-none text-slate-700 placeholder-slate-400 transition-all text-sm leading-relaxed" placeholder="e.g., Photosynthesis is the process by which green plants and certain other organisms transform light energy into chemical energy. During photosynthesis in green plants, light energy is captured and used to convert water, carbon dioxide, and minerals into oxygen and energy-rich organic compounds. Main stages are Light-dependent reactions and the Calvin cycle..."></textarea>
+                    
+                    <button id="generateBtn" onclick="processText()" class="mt-4 w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg shadow-purple-500/30 transform hover:-translate-y-1 transition-all active:scale-95 flex justify-center items-center gap-2">
+                        <span>Generate Mindmap</span>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Output / Visualization -->
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="glass-panel rounded-3xl p-2 h-[600px] flex flex-col relative group">
+                    <!-- Toolbar for map -->
+                    <div class="absolute top-6 right-6 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="zoomMap(1.2)" class="w-10 h-10 bg-white/90 shadow-md rounded-full text-slate-600 hover:text-purple-600 hover:bg-white flex justify-center items-center transition-colors">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </button>
+                        <button onclick="zoomMap(0.8)" class="w-10 h-10 bg-white/90 shadow-md rounded-full text-slate-600 hover:text-purple-600 hover:bg-white flex justify-center items-center transition-colors">
+                            <i class="fa-solid fa-magnifying-glass-minus"></i>
+                        </button>
+                        <button onclick="resetZoom()" class="w-10 h-10 bg-white/90 shadow-md rounded-full text-slate-600 hover:text-purple-600 hover:bg-white flex justify-center items-center transition-colors" title="Reset View">
+                            <i class="fa-solid fa-compress"></i>
+                        </button>
+                    </div>
+
+                    <!-- Canvas Area -->
+                    <div class="flex-grow w-full h-full bg-white/30 rounded-2xl border border-white/50 overflow-auto flex items-center justify-center p-8 relative" id="canvas-container">
+                        
+                        <!-- Empty State -->
+                        <div id="empty-state" class="text-center flex flex-col items-center justify-center opacity-60">
+                            <i class="fa-regular fa-map text-6xl text-slate-300 mb-4"></i>
+                            <p class="text-slate-500 font-medium">Your generated mind map will appear here</p>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="loading-state" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm z-20 rounded-2xl">
+                            <div class="relative w-20 h-20">
+                                <div class="absolute inset-0 border-4 border-purple-200 rounded-full"></div>
+                                <div class="absolute inset-0 border-4 border-purple-600 rounded-full border-t-transparent animate-spin"></div>
+                                <i class="fa-solid fa-brain absolute inset-0 flex items-center justify-center text-purple-600 animate-pulse text-xl"></i>
+                            </div>
+                            <p class="mt-4 text-purple-700 font-semibold animate-pulse">AI is structuring your thoughts...</p>
+                        </div>
+
+                        <!-- Error State -->
+                        <div id="error-state" class="hidden absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-red-50/80 backdrop-blur-sm rounded-2xl z-20">
+                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i>
+                            </div>
+                            <h3 class="text-red-700 font-bold text-lg mb-2">Oops! Something went wrong.</h3>
+                            <p id="error-message" class="text-red-500 text-sm max-w-md">Failed to generate the mindmap.</p>
+                            <button onclick="hideError()" class="mt-4 px-4 py-2 bg-white text-slate-600 rounded-lg shadow hover:bg-slate-50 transition-colors">Dismiss</button>
+                        </div>
+
+                        <!-- Actual Mindmap Render Container -->
+                        <div id="mermaid-container" class="w-full h-full flex justify-center items-center transition-transform origin-center duration-200">
+                            <!-- Rendered SVG goes here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose',
+            mindmap: {
+                padding: 15,
+                useMaxWidth: true
+            }
+        });
+
+        // UI Elements
+        const generateBtn = document.getElementById('generateBtn');
+        const emptyState = document.getElementById('empty-state');
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        const errorMessage = document.getElementById('error-message');
+        const mermaidContainer = document.getElementById('mermaid-container');
+        
+        let currentZoom = 1;
+
+        function clearText() {
+            document.getElementById('userInput').value = '';
+        }
+
+        function showLoading(isLoading) {
+            if (isLoading) {
+                loadingState.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                mermaidContainer.innerHTML = '';
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Generating...`;
+                generateBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            } else {
+                loadingState.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = `<span>Generate Mindmap</span><i class="fa-solid fa-wand-magic-sparkles"></i>`;
+                generateBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        }
+
+        function showError(message) {
+            errorState.classList.remove('hidden');
+            errorMessage.textContent = message;
+            showLoading(false);
+        }
+
+        function hideError() {
+            errorState.classList.add('hidden');
+            if (mermaidContainer.innerHTML === '') {
+                emptyState.classList.remove('hidden');
+            }
+        }
+
+        async function processText() {
+            const text = document.getElementById('userInput').value.trim();
+            
+            if (!text) {
+                showError("Please enter some text to generate a mindmap.");
+                return;
+            }
+
+            hideError();
+            showLoading(true);
+            resetZoom(); // reset zoom on new generation
+
+            try {
+                // Prepare Gemini API Call
+                // Using gemini-3-flash-preview as instructed, with empty API key to be filled by the Canvas environment
+                const apiKey = "AQ.Ab8RN6Kjw11I0o0vqMknvcsGtxIGOrBdE737SatxLV3ctCeCtQ"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const systemPrompt = `You are an expert system designed to convert unstructured text into a Mermaid.js mindmap structure. 
+Rules:
+1. Extract the main concept as the root node.
+2. Extract major categories as child nodes.
+3. Extract specific details as leaf nodes.
+4. Output MUST BE ONLY valid Mermaid.js mindmap syntax.
+5. Do NOT use markdown code blocks (like \`\`\`mermaid). Do not include any conversational text.
+6. Start the response strictly with the word "mindmap".
+7. Use proper indentation (spaces) to denote hierarchy.
+8. Example format:
+mindmap
+  root((Main Topic))
+    Category 1
+      Detail A
+      Detail B
+    Category 2
+      Detail C`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: text }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // Extract text from Gemini response
+                let mermaidCode = "";
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts) {
+                    mermaidCode = result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error("Invalid response structure from AI.");
+                }
+
+                // Clean the output: AI sometimes wraps in markdown despite instructions
+                mermaidCode = mermaidCode.replace(/```mermaid\n?/g, '');
+                mermaidCode = mermaidCode.replace(/```\n?/g, '');
+                mermaidCode = mermaidCode.trim();
+
+                // Validate it starts with mindmap
+                if (!mermaidCode.toLowerCase().startsWith('mindmap')) {
+                     mermaidCode = "mindmap\n" + mermaidCode;
+                }
+
+                // Render the graph
+                await renderMermaidGraph(mermaidCode);
+
+            } catch (error) {
+                console.error("Error generating map:", error);
+                showError("Failed to generate map. " + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function renderMermaidGraph(code) {
+            try {
+                // Clear previous graph
+                mermaidContainer.innerHTML = '';
+                
+                // Generate unique ID for the SVG
+                const id = `mermaid-svg-${Date.now()}`;
+                
+                // Render
+                const { svg } = await mermaid.render(id, code);
+                mermaidContainer.innerHTML = svg;
+                
+                // Style the injected SVG to fit nicely
+                const svgElement = mermaidContainer.querySelector('svg');
+                if (svgElement) {
+                    svgElement.style.maxWidth = '100%';
+                    svgElement.style.height = 'auto';
+                }
+
+            } catch (error) {
+                console.error("Mermaid parsing error:", error);
+                // If mermaid fails, show the raw code so user can see AI hallucination
+                showError("The AI generated an invalid graph format. Please try rephrasing your text.");
+            }
+        }
+
+        // Simple Pan/Zoom functionality
+        function zoomMap(factor) {
+            const svgElement = mermaidContainer.querySelector('svg');
+            if (svgElement) {
+                currentZoom *= factor;
+                // Limit zoom levels
+                if (currentZoom > 3) currentZoom = 3;
+                if (currentZoom < 0.3) currentZoom = 0.3;
+                mermaidContainer.style.transform = `scale(${currentZoom})`;
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            mermaidContainer.style.transform = `scale(1)`;
+        }
+
+    </script>
+</body>
+</html>
